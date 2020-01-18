@@ -1,43 +1,67 @@
-import React from "react";
-import PropTypes from "prop-types";
-import { Text, StyleSheet } from "react-native";
-import { BodyText } from "./index";
-import Colors from "../../constants/Colors";
-import WebBrowserManager from "../../lib/WebBrowserManager";
+import PropTypes from "prop-types"
+import React from "react"
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  ViewPropTypes,
+} from "react-native"
+
+import Colors from "../../constants/Colors"
+import WebBrowserManager from "../../lib/WebBrowserManager"
+import Style from "../../styles/Typography"
 
 const styles = StyleSheet.create({
   linkText: {
     color: Colors.linkBlue,
   },
-});
+})
 
 class Link extends React.Component {
   static propTypes = {
-    href: PropTypes.string,
     children: PropTypes.node,
-    textStyle: PropTypes.oneOfType([PropTypes.shape(), PropTypes.number]),
+    containerStyle: ViewPropTypes.style,
+    href: PropTypes.string,
     onPress: PropTypes.func,
-  };
+    style: Text.propTypes.style,
+  }
+
   static defaultProps = {
-    href: "",
-    children: "",
-    textStyle: {},
+    children: ``,
+    containerStyle: {},
+    href: ``,
     onPress: null,
-  };
+    style: {},
+  }
+
   openLink = () => {
-    const { href } = this.props;
+    const { href } = this.props
     if (href) {
-      WebBrowserManager.openLink(href);
+      WebBrowserManager.openLink(href)
     }
-  };
+  }
+
   render() {
-    const { onPress, children, textStyle } = this.props;
+    const {
+      children,
+      containerStyle,
+      onPress,
+      style,
+    } = this.props
     return (
-      <Text onPress={onPress || this.openLink}>
-        <BodyText style={[styles.linkText, textStyle]}>{children}</BodyText>
-      </Text>
-    );
+      <TouchableOpacity
+        onPress={onPress || this.openLink}
+        style={containerStyle}
+      >
+        <Text
+          style={[Style.bodyText, styles.linkText, style]}
+        >
+          {children}
+        </Text>
+      </TouchableOpacity>
+
+    )
   }
 }
 
-export default Link;
+export default Link

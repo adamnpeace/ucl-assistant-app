@@ -1,213 +1,365 @@
 /* eslint-disable react/no-unused-state */
-import React, { Component, Fragment } from "react";
+import { StoreReview } from "expo"
+import Constants from "expo-constants"
+import * as IntentLauncherAndroid from "expo-intent-launcher"
+import PropTypes from "prop-types"
+import React, { Component } from "react"
 import {
   Alert,
-  Platform,
-  ToastAndroid,
-  View,
   Clipboard,
+  Linking,
+  Platform,
   StyleSheet,
-} from "react-native"; // eslint-disable-line react-native/split-platform-components
-import { NavigationActions, StackActions } from "react-navigation";
-import PropTypes from "prop-types";
-import { Constants, IntentLauncherAndroid } from "expo";
-import { connect } from "react-redux";
-import {
-  TitleText,
-  BodyText,
-  SubtitleText,
-  ButtonText,
-} from "../../components/Typography";
-import { Page, Horizontal, PaddedIcon } from "../../components/Containers";
-import { signOut } from "../../actions/userActions";
-import Button, { SmallButton } from "../../components/Button";
-import Colors from "../../constants/Colors";
-import TextInput from "../../components/Input/TextInput";
-import NotificationSwitch from "./NotificationSwitch";
-import LiveIndicator from "../StudySpaceDetailScreen/LiveIndicator";
-import common from "../../styles/common";
+  View,
+} from "react-native"
+import CheckBox from 'react-native-check-box'
+import { NavigationActions, StackActions } from "react-navigation"
+import { connect } from "react-redux"
 
-const { version } = require("../../package.json");
+import {
+  setShouldTrackAnalytics as setShouldTrackAnalyticsAction,
+  signOut as signOutAction,
+} from "../../actions/userActions"
+import { SmallButton } from "../../components/Button"
+import { Horizontal, Page } from "../../components/Containers"
+import TextInput from "../../components/Input/TextInput"
+// import NotificationSwitch from "./NotificationSwitch"
+import LiveIndicator from "../../components/LiveIndicator"
+import {
+  BodyText,
+  HeaderText,
+  Link,
+} from "../../components/Typography"
+import { AnalyticsManager, MailManager } from "../../lib"
+import common from "../../styles/common"
+
+const {
+  repository: {
+    url: githubURL,
+  },
+  version,
+} = require(`../../package.json`)
 
 const styles = StyleSheet.create({
   faqButton: {
     marginBottom: 10,
   },
-  notificationSettingsButton: {
-    marginTop: 10,
+  feedbackButton: {
+    alignSelf: `flex-start`,
+    marginVertical: 10,
+  },
+  // notificationSettingsButton: {
+  //   marginTop: 10,
+  // },
+  releaseChannel: {
+    alignItems: `center`,
+    flexDirection: `row`,
+    justifyContent: `flex-start`,
+    marginBottom: 10,
   },
   section: {
+    marginBottom: 15,
     marginTop: 15,
+  },
+  settingView: {
+    flex: 1,
+    flexDirection: `row`,
+  },
+  settingsCheckBox: {
+    flex: 0.1,
+    justifyContent: `center`,
+  },
+  settingsText: {
+    flex: 0.9,
+  },
+  signOut: {
+    marginBottom: 10,
+    marginTop: 10,
   },
   textWithUpperMargin: {
     marginTop: 10,
   },
-});
+})
 
-class SettingsScreen extends Component {
-  static navigationOptions = {
-    header: null,
-  };
+export class SettingsScreen extends Component {
+  static mapStateToProps = (state) => ({
+    user: state.user,
+  })
+
+  static mapDispatchToProps = (dispatch) => ({
+    setShouldTrackAnalytics: (shouldTrackAnalytics) => dispatch(
+      setShouldTrackAnalyticsAction(shouldTrackAnalytics),
+    ),
+    signOut: () => dispatch(signOutAction()),
+  })
 
   static propTypes = {
-    signOut: PropTypes.func,
     navigation: PropTypes.shape(),
-    state: PropTypes.shape(),
-  };
+    setShouldTrackAnalytics: PropTypes.func,
+    signOut: PropTypes.func,
+    user: PropTypes.shape(),
+  }
 
   static defaultProps = {
-    signOut: () => {},
     navigation: {},
-    state: {},
-  };
+    setShouldTrackAnalytics: () => { },
+    signOut: () => { },
+    user: {},
+  }
 
-  static mapStateToProps = state => ({
-    state,
-  });
+  constructor() {
+    super()
+    this.state = {
+      isSigningOut: false,
+    }
+  }
 
-  static mapDispatchToProps = dispatch => ({
-    signOut: () => dispatch(signOut()),
-  });
+  componentDidUpdate(_, prevState) {
+    const { user, navigation } = this.props
+    if (prevState.isSigningOut && user.token === ``) {
+      const action = StackActions.reset({
+        actions: [NavigationActions.navigate({ routeName: `Splash` })],
+        index: 0,
+      })
+      navigation.dispatch(action)
+    }
+  }
 
-  static launchNotificationSettings() {
-    if (Platform.OS === "android") {
+  launchNotificationSettings = () => {
+    // note that this will only work on standalone apps
+    // because the bundleIdentifier/packageName will
+    // only be used when an APK/IPA is built
+    if (Platform.OS === `android`) {
       IntentLauncherAndroid.startActivityAsync(
         IntentLauncherAndroid.ACTION_APP_NOTIFICATION_SETTINGS,
         {
-          "android.provider.extra.APP_PACKAGE": "me.mbell.uclassistant",
+          "android.provider.extra.APP_PACKAGE":
+            Constants.manifest.android.package,
         },
-      );
+      )
+    } else {
+      // is iOS
+      Linking.openURL(
+        `app-settings://notification/${
+          Constants.manifest.ios.bundleIdentifier
+        }`,
+      )
     }
   }
 
-  static releaseChannelStyle = {
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    alignItems: "center",
-  };
+  toggleAnalytics = () => {
+    const {
+      user: {
+        settings: { shouldTrackAnalytics: value },
+      },
+      setShouldTrackAnalytics,
+    } = this.props
 
-  state = {
-    isSigningOut: false,
-  };
-
-  componentDidUpdate(_, prevState) {
-    if (prevState.isSigningOut && this.props.state.user.token === "") {
-      if (Platform.OS === "android") {
-        ToastAndroid.show(
-          "You have successfully signed out",
-          ToastAndroid.SHORT,
-        );
-      }
-      const action = StackActions.reset({
-        index: 0,
-        actions: [NavigationActions.navigate({ routeName: "Splash" })],
-      });
-      this.props.navigation.dispatch(action);
-    }
+    setShouldTrackAnalytics(!value)
   }
 
   signOut = () => {
-    this.props.signOut();
-    this.setState({ isSigningOut: true });
-  };
+    const { signOut } = this.props
+    signOut()
+    this.setState({ isSigningOut: true })
+  }
 
   navigateToFAQs = () => {
-    this.props.navigation.navigate("FAQ");
-  };
+    const { navigation } = this.props
+    navigation.navigate(`FAQ`)
+    AnalyticsManager.logEvent(AnalyticsManager.events.SETTINGS_VIEW_FAQS)
+  }
 
-  async copyTokenToClipboard() {
-    await Clipboard.setString(this.props.state.user.token);
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Token copied!", ToastAndroid.SHORT);
-    } else {
-      Alert.alert("Copied", "Token copied to clipboard.");
+  copyTokenToClipboard = async () => {
+    const { user: { token } } = this.props
+    await Clipboard.setString(token)
+    Alert.alert(`Copied`, `Token copied to clipboard.`)
+  }
+
+  giveFeedback = () => {
+    const { user: { upi } } = this.props
+    const { deviceName, platform, manifest: { releaseChannel } } = Constants
+    MailManager.composeAsync({
+      body: `I've been using UCL Assistant and I just wanted `
+        + `to tell you ... \n\n`
+        + `Technical Information\n${JSON.stringify({
+          deviceName,
+          platform,
+          releaseChannel,
+          upi,
+        }, null, 2)}`,
+      recipients: [`isd.apiteam@ucl.ac.uk`],
+      subject: `Feedback about UCL Assistant`,
+    })
+    AnalyticsManager.logEvent(AnalyticsManager.events.SETTINGS_GIVE_FEEDBACK)
+  }
+
+  rateApp = () => {
+    const isSupported = StoreReview.isSupported()
+    if (isSupported) {
+      StoreReview.requestReview()
     }
+    AnalyticsManager.logEvent(
+      AnalyticsManager.events.SETTINGS_RATE_APP,
+      { isSupported },
+    )
+  }
+
+  static navigationOptions = {
+    header: null,
+  }
+
+  renderDev = () => {
+    const { user } = this.props
+    return __DEV__ && (
+      <View style={styles.section}>
+        <HeaderText>UCL API Token</HeaderText>
+        <Horizontal>
+          <TextInput style={common.flex} value={user.token} />
+          <SmallButton onPress={this.copyTokenToClipboard}>
+            Copy
+          </SmallButton>
+        </Horizontal>
+        <HeaderText>State</HeaderText>
+        <BodyText>{JSON.stringify(user, `\n`, 2)}</BodyText>
+      </View>
+    )
   }
 
   render() {
-    const { state } = this.props;
+    const { user } = this.props
     return (
       <Page mainTabPage>
-        <TitleText>Settings</TitleText>
-        <View>
-          <SubtitleText>Notifications</SubtitleText>
-          <NotificationSwitch />
-          <Button
-            onPress={() => SettingsScreen.launchNotificationSettings()}
-            style={styles.notificationSettingsButton}
+        <View style={styles.section}>
+          <HeaderText>User</HeaderText>
+          <BodyText>
+            {`Logged in as ${user.fullName}`}
+          </BodyText>
+          <BodyText>
+            {`Unique Person Identifier (UPI): ${user.upi}`}
+          </BodyText>
+          <Link
+            onPress={this.signOut}
+            style={styles.signOut}
+            testID="signOutButton"
           >
-            Manage Notification Settings
-          </Button>
+            Sign Out
+          </Link>
+          <View style={styles.settingView}>
+            <BodyText
+              style={styles.settingsText}
+            >
+              {
+                user.settings.shouldTrackAnalytics
+                  ? `Allow UCL Assistant to send analytics data to UCL API`
+                  : `Disallow UCL Assistant from sending analytics data to `
+                  + `UCL API`
+              }
+            </BodyText>
+            <CheckBox
+              testID="analyticsCheckbox"
+              style={styles.settingsCheckBox}
+              isChecked={user.settings.shouldTrackAnalytics}
+              onClick={this.toggleAnalytics}
+            />
+          </View>
         </View>
         <View style={styles.section}>
-          <SubtitleText>User</SubtitleText>
-          <BodyText>Logged in as {state.user.fullName}</BodyText>
-          <BodyText>Unique Person Identifier (UPI): {state.user.upi}</BodyText>
-          <Button onPress={this.signOut}>
-            <Horizontal>
-              <PaddedIcon
-                name="log-out"
-                size={24}
-                color={Colors.pageBackground}
-              />
-              <ButtonText>Sign Out</ButtonText>
-            </Horizontal>
-          </Button>
-        </View>
-        <View style={styles.section}>
-          <TitleText>About This App</TitleText>
-          <Button onPress={this.navigateToFAQs} style={styles.faqButton}>
+          <HeaderText>App Info</HeaderText>
+          <Link href="https://uclapi.com">Website</Link>
+          <Link
+            onPress={this.navigateToFAQs}
+            style={styles.faqButton}
+            testID="faqButton"
+          >
             Frequently Asked Questions
-          </Button>
-          <BodyText>Version {version}</BodyText>
-          <Horizontal style={SettingsScreen.releaseChannelStyle}>
+          </Link>
+          <BodyText>
+            {`Version: ${version}`}
+          </BodyText>
+          <Horizontal style={styles.releaseChannel}>
             {__DEV__ ? (
               <LiveIndicator>Developer Mode</LiveIndicator>
             ) : (
-              <Fragment>
-                <BodyText>Release Channel: </BodyText>
-                <LiveIndicator>
-                  {Constants.manifest.releaseChannel || "dev"}
-                </LiveIndicator>
-              </Fragment>
+              <>
+                  <BodyText>Release Channel: </BodyText>
+                  <LiveIndicator>
+                    {Constants.manifest.releaseChannel || `dev`}
+                  </LiveIndicator>
+              </>
             )}
           </Horizontal>
+          <Link
+            href={githubURL}
+            testID="githubButton"
+          >
+            Source Code
+          </Link>
+          <Link
+            containerStyle={styles.feedbackButton}
+            onPress={this.giveFeedback}
+            testID="feedbackButton"
+          >
+            Send Us Feedback
+          </Link>
+          {/* <Link
+            onPress={this.rateApp}
+          >
+            Rate Us
+          </Link> */}
         </View>
         <View style={styles.section}>
-          <SubtitleText>Author</SubtitleText>
+          <HeaderText>Credits</HeaderText>
           <BodyText>
             Created by Matt Bell (class of 2018) using the UCL API.
           </BodyText>
           <BodyText style={styles.textWithUpperMargin}>
-            Currently managed by the UCL API Team: a group of students working
-            together within ISD to improve UCL by building a platform on top of
-            UCL{`'`}s digital services for students.
+            Currently managed by the UCL API Team: a group of
+            students working together within ISD to improve UCL
+            by building a platform on top of UCL&apos;s
+            digital services for students.
           </BodyText>
           <BodyText style={styles.textWithUpperMargin}>
-            Illustrations courtesy of the unDraw project, released under the MIT
-            license.
+            Illustrations courtesy of the unDraw project,
+            released under the MIT license.
           </BodyText>
         </View>
-        {__DEV__ && (
-          <View style={styles.section}>
-            <TitleText>Dev Stuff</TitleText>
-            <SubtitleText>UCL API Token</SubtitleText>
-            <Horizontal>
-              <TextInput style={common.flex} value={state.user.token} />
-              <SmallButton onPress={() => this.copyTokenToClipboard()}>
-                Copy
-              </SmallButton>
-            </Horizontal>
-            <SubtitleText>State</SubtitleText>
-            <BodyText>{JSON.stringify(state, "\n", 2)}</BodyText>
-          </View>
-        )}
+        {this.renderDev()}
       </Page>
-    );
+    )
   }
 }
 
 export default connect(
   SettingsScreen.mapStateToProps,
   SettingsScreen.mapDispatchToProps,
-)(SettingsScreen);
+)(SettingsScreen)
+
+/*
+
+<View>
+  <SubtitleText>Notifications</SubtitleText>
+  <NotificationSwitch />
+  <Button
+    onPress={() => SettingsScreen.launchNotificationSettings()}
+    style={styles.notificationSettingsButton}
+  >
+    Manage Notification Settings
+  </Button>
+</View>
+<View style={styles.section}>
+  <SubtitleText>Default Screen</SubtitleText>
+  <BodyText>Set the default screen that shows when you open the app</BodyText>
+  <Picker
+    // selectedValue={this.state.language}
+    // style={{height: 50, width: 100}}
+    // onValueChange={(itemValue, itemIndex) =>
+    //   this.setState({language: itemValue})
+    // }
+    >
+    <Picker.Item label="Timetable" value="timetable" />
+    <Picker.Item label="Study Spaces" value="studyspaces" />
+  </Picker>
+</View>
+
+*/

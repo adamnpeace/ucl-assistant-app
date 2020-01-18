@@ -1,57 +1,60 @@
-import { createStore, applyMiddleware, combineReducers } from "redux";
-import { persistStore } from "redux-persist";
-import AsyncStorage from "redux-persist/es/storage";
-import createSecureStore from "redux-persist-expo-securestore";
-import thunk from "redux-thunk";
-import persistReducer from "redux-persist/lib/persistReducer";
-import debounce from "./lib/debounce";
-import reducer, { initialState } from "./reducers";
-import { SIGN_OUT_USER } from "./constants/userConstants";
+import { AsyncStorage } from "react-native"
+import { applyMiddleware, combineReducers, createStore } from "redux"
+import { persistStore } from "redux-persist"
+import createSecureStore from "redux-persist-expo-securestore"
+import persistReducer from "redux-persist/lib/persistReducer"
+import thunk from "redux-thunk"
 
-const { user, ...otherReducers } = reducer;
+import { SIGN_OUT_USER } from "./constants/userConstants"
+import debounce from "./lib/debounce"
+import reducer, { initialState } from "./reducers"
 
-const secureStorage = createSecureStore();
+const { user, ...otherReducers } = reducer
 
-const middleware = [debounce.middleware(), thunk];
+const secureStorage = createSecureStore()
 
-if (process.env.NODE_ENV === "development") {
-  const { logger } = require("redux-logger");
-  middleware.push(logger);
+const middleware = [debounce.middleware(), thunk]
+
+if (process.env.NODE_ENV === `development`) {
+  const { logger } = require(`redux-logger`)
+  middleware.push(logger)
 }
 
 const config = {
-  key: "root",
-  storage: AsyncStorage,
+  blacklist: [`user`],
   debug: __DEV__,
-  blacklist: ["user"],
+  key: `root`,
+  storage: AsyncStorage,
   timeout: null, // https://github.com/rt2zz/redux-persist/issues/786
-};
+}
 
 const userPersistConfig = {
-  key: "user",
-  storage: secureStorage,
+  blacklist: [`signIn`],
   debug: __DEV__,
+  key: `user`,
+  storage: secureStorage,
   timeout: null,
-  blacklist: ["signIn"],
-};
+}
 
 const appReducer = combineReducers({
   user: persistReducer(userPersistConfig, user),
   ...otherReducers,
-});
+})
 
-const rootReducer = (state, action) =>
-  appReducer(action.type === SIGN_OUT_USER ? undefined : state, action);
+const rootReducer = (state, action) => appReducer(
+  action.type === SIGN_OUT_USER ? undefined : state, action
+)
 
-const persistRootReducer = persistReducer(config, rootReducer);
+
+const persistRootReducer = persistReducer(config, rootReducer)
 
 const store = createStore(
   persistRootReducer,
   initialState,
   applyMiddleware(...middleware),
-);
+)
 const persistor = persistStore(store, null, () => {
-  store.getState();
-});
+  store.getState()
+})
 
-export default { persistor, store };
+export default { persistor, store }

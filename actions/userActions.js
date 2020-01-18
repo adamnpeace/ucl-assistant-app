@@ -1,61 +1,82 @@
-import { AuthSession } from "expo";
-import * as constants from "../constants/userConstants";
-import { clearTimetable } from "./timetableActions";
-import { ASSISTANT_API_URL } from "../constants/API";
-import configureStore from "../configureStore";
+import { AuthSession } from "expo"
 
-const { persistor } = configureStore;
+import configureStore from "../configureStore"
+import { ASSISTANT_API_URL } from "../constants/API"
+import * as constants from "../constants/userConstants"
+import { AnalyticsManager, ErrorManager } from "../lib"
+import { clearTimetable } from "./timetableActions"
+
+const { persistor } = configureStore
 
 export const isSigningIn = () => ({
   type: constants.IS_SIGNING_IN,
-});
+})
 
-export const signInSuccess = result => ({
+export const signInSuccess = (result) => ({
   type: constants.SIGN_IN_SUCCESS,
   user: {
-    token: result.params.token,
     apiToken: result.params.apiToken,
-    scopeNumber: parseInt(result.params.scopeNumber, 10),
+    cn: result.params.cn,
+    department: result.params.department,
     email: result.params.email,
     fullName: result.params.full_name,
     givenName: result.params.given_name,
-    cn: result.params.cn,
+    scopeNumber: parseInt(result.params.scopeNumber, 10),
+    token: result.params.token,
     upi: result.params.upi,
-    department: result.params.department,
   },
-});
+})
 
-export const signInFailure = error => ({
-  type: constants.SIGN_IN_FAILURE,
+export const signInFailure = (error) => ({
   error,
-});
+  type: constants.SIGN_IN_FAILURE,
+})
 
 export const signInCancel = () => ({
   type: constants.SIGN_IN_CANCEL,
-});
+})
 
-export const signIn = () => async dispatch => {
-  await dispatch(isSigningIn());
-  const returnUrl = AuthSession.getRedirectUrl();
+export const signIn = () => async (dispatch) => {
+  await dispatch(isSigningIn())
+  const returnUrl = AuthSession.getRedirectUrl()
   const result = await AuthSession.startAsync({
     authUrl: `${ASSISTANT_API_URL}/connect/uclapi?return=${encodeURIComponent(
       returnUrl,
     )}`,
-  });
-  if (result.type === "success") {
-    return dispatch(signInSuccess(result));
+  })
+  if (result.type === `success`) {
+    const action = signInSuccess(result)
+    AnalyticsManager.setUserId(action.user.upi)
+    AnalyticsManager.setUserProperties(action.user)
+    ErrorManager.setUser(action.user)
+    return dispatch(action)
   }
   // login cancelled by user.
-  return dispatch(signInCancel());
-};
+  return dispatch(signInCancel())
+}
 
 export const signOutUser = () => ({
   type: constants.SIGN_OUT_USER,
-});
+})
 
-export const signOut = () => async dispatch => {
-  await dispatch(clearTimetable());
-  await dispatch(signOutUser());
-  await persistor.purge();
-  return {};
-};
+export const signOut = () => async (dispatch) => {
+  AnalyticsManager.clearUserProperties()
+  await dispatch(clearTimetable())
+  await dispatch(signOutUser())
+  await persistor.purge()
+  return {}
+}
+
+export const declinePushNotifications = () => ({
+  type: constants.DECLINE_PUSH_NOTIFICATIONS,
+})
+
+export const setExpoPushToken = (pushToken) => ({
+  pushToken,
+  type: constants.SET_EXPO_PUSH_TOKEN,
+})
+
+export const setShouldTrackAnalytics = (shouldTrack) => ({
+  shouldTrack,
+  type: constants.SET_SHOULD_TRACK_ANALYTICS,
+})

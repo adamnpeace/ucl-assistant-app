@@ -1,66 +1,114 @@
-import React, { Component } from "react";
-import { View, StyleSheet, ActivityIndicator } from "react-native";
-import PropTypes from "prop-types";
-import { connect } from "react-redux";
-import { TextInput } from "../../components/Input";
-import { CentredText } from "../../components/Typography";
-import SearchResult from "../../components/SearchResult";
-import ApiManager from "../../lib/ApiManager";
+// @flow
+import PropTypes from "prop-types"
+import React, { Component } from "react"
+import { ActivityIndicator, StyleSheet, View } from "react-native"
+import { connect } from "react-redux"
+
+import { addRecent } from "../../actions/roomsActions"
+import { SearchInput } from "../../components/Input"
+import SearchResult from "../../components/SearchResult"
+import { CentredText } from "../../components/Typography"
+import ApiManager from "../../lib/ApiManager"
 
 const styles = StyleSheet.create({
   container: {
     paddingBottom: 20,
   },
-  textInput: {
-    flex: 1,
-  },
-});
+})
+
+const MIN_QUERY_LENGTH = 4
+const SEARCH_DELAY = 500
 
 class SearchControl extends Component {
-  static SEARCH_DELAY = 500;
-  static propTypes = {
-    token: PropTypes.string,
-    navigation: PropTypes.shape().isRequired,
-  };
-  static defaultProps = {
-    token: "",
-  };
-  static mapStateToProps = state => ({
+  static mapStateToProps = (state) => ({
     token: state.user.token,
-  });
-  static mapDispatchToProps = () => ({});
+  })
+
+  static mapDispatchToProps = (dispatch) => ({
+    addRecentRoom: (room) => dispatch(addRecent(room)),
+  })
+
+  static propTypes = {
+    addRecentRoom: PropTypes.func,
+    navigation: PropTypes.shape().isRequired,
+    token: PropTypes.string,
+  }
+
+  static defaultProps = {
+    addRecentRoom: () => { },
+    token: ``,
+  }
+
   constructor(props) {
-    super(props);
+    super(props)
     this.state = {
-      query: "",
       error: null,
       isSearching: false,
+      query: ``,
       searchResults: [],
-    };
+    }
   }
+
+  componentDidMount() {
+    const { navigation } = this.props
+    this.subscriptions = [
+      navigation.addListener(`didFocus`, this.componentDidFocus),
+    ]
+    this.componentDidFocus({ state: navigation.state })
+  }
+
+  componentWillUnmount() {
+    this.subscriptions.forEach((sub) => sub.remove())
+  }
+
+  componentDidFocus = (payload) => {
+    const { query } = this.state
+    const queryExists = this.queryExists(payload.state)
+    if (queryExists && query !== payload.state.params.query) {
+      this.setState({ query: payload.state.params.query })
+      this.searchRooms(payload.state.params.query, true)
+    }
+  };
+
+  queryExists = (navigationState) => navigationState
+    && navigationState.params
+    && navigationState.params.query
+    && navigationState.params.query.length > 0;
+
   onChangeText = (query: String) => {
-    if (query.length > 3) {
-      clearTimeout(this.searchTimer);
+    if (query.length >= MIN_QUERY_LENGTH) {
+      clearTimeout(this.searchTimer)
       this.searchTimer = setTimeout(
         () => this.searchRooms(query),
-        SearchControl.SEARCH_DELAY,
-      );
+        SEARCH_DELAY,
+      )
     }
-    this.setState({ query });
-  };
-  searchRooms = async (query: String) => {
-    const { token } = this.props;
+    this.setState({ query })
+  }
+
+  searchRooms = async (query: String, autoNavigate = false) => {
+    const { token } = this.props
     try {
-      this.setState({ isSearching: true });
-      const results = await ApiManager.rooms.search(token, query);
-      this.setState({ searchResults: results, isSearching: false });
+      this.setState({ isSearching: true })
+      const results = await ApiManager.rooms.search(token, query)
+      if (autoNavigate && results.length === 1) {
+        this.navigateToRoomDetail(results[0])()
+      }
+      this.setState({ isSearching: false, searchResults: results })
     } catch (error) {
-      this.setState({ error: error.message, isSearching: false });
+      this.setState({ error: error.message, isSearching: false })
     }
-  };
-  navigateToRoomDetail = room => () =>
-    this.props.navigation.navigate("RoomDetailScreen", { room });
-  renderSearchResult = searchResult => (
+  }
+
+  navigateToRoomDetail = (room) => () => {
+    const { navigation, addRecentRoom } = this.props
+    addRecentRoom(room)
+    navigation.navigate(`RoomDetail`, { room })
+  }
+
+  clear = () => this.setState({ query: ``, searchResults: [] })
+
+  renderSearchResult = (searchResult) => (
     <SearchResult
       key={searchResult.roomid}
       topText={searchResult.roomname}
@@ -69,33 +117,48 @@ class SearchControl extends Component {
       buttonText="View"
       onPress={this.navigateToRoomDetail(searchResult)}
     />
-  );
+  )
+
+  renderStatusText = () => {
+    const { query, searchResults } = this.state
+    if (query.length === 0) {
+      return <CentredText>Start typing to get search results</CentredText>
+    }
+    if (query.length < MIN_QUERY_LENGTH && searchResults.length === 0) {
+      return <CentredText>Please enter a few more characters</CentredText>
+    }
+    if (query.length > 0 && searchResults.length === 0) {
+      return <CentredText>No results found.</CentredText>
+    }
+    return null
+  }
+
   render() {
-    const { query, error, isSearching, searchResults } = this.state;
+    const {
+      query, error, isSearching, searchResults,
+    } = this.state
     return (
       <View style={styles.container}>
-        <TextInput
+        <SearchInput
           placeholder="Search for a room or building name..."
-          onChangeText={this.onChangeText}
-          value={query}
-          clearButtonMode="always"
-          style={styles.textInput}
+          onChangeQuery={this.onChangeText}
+          query={query}
+          clear={this.clear}
         />
-        {error ? <CentredText>Error! {error} </CentredText> : null}
+        {error ? (
+          <CentredText>
+            {`Error! ${error} `}
+          </CentredText>
+        ) : null}
         {isSearching ? <ActivityIndicator /> : null}
-        {query.length === 0 ? (
-          <CentredText>Start typing to get search results</CentredText>
-        ) : null}
-        {query.length > 0 && searchResults.length === 0 ? (
-          <CentredText>No results found.</CentredText>
-        ) : null}
+        {this.renderStatusText()}
         {searchResults.map(this.renderSearchResult)}
       </View>
-    );
+    )
   }
 }
 
 export default connect(
   SearchControl.mapStateToProps,
   SearchControl.mapDispatchToProps,
-)(SearchControl);
+)(SearchControl)

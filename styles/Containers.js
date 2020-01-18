@@ -1,124 +1,128 @@
-import { Dimensions, Platform, StyleSheet, StatusBar } from "react-native";
-import Colors from "../constants/Colors";
-import { BORDER_RADIUS } from "../constants/styleConstants";
+import {
+  Dimensions,
+  Platform,
+  StatusBar,
+  StyleSheet,
+} from "react-native"
 
-const { height, width } = Dimensions.get("window");
+import Colors from "../constants/Colors"
+import { BORDER_RADIUS } from "../constants/styleConstants"
+import Shadow from "../lib/Shadow"
+
+const { height, width } = Dimensions.get(`window`)
 
 const cardShared = {
-  padding: 10,
+  alignSelf: `stretch`,
   backgroundColor: Colors.cardBackground,
-  elevation: 3,
-  marginBottom: 5,
-  marginTop: 5,
   borderRadius: BORDER_RADIUS,
-  shadowColor: Colors.textColor,
-  shadowOffset: { width: 0, height: 3 },
-  shadowRadius: 3,
-  shadowOpacity: 0.5,
-  marginLeft: Platform.OS === "ios" ? 1 : 0,
-  marginRight: Platform.OS === "ios" ? 1 : 0,
-};
+  marginBottom: 5,
+  marginLeft: Platform.OS === `ios` ? 1 : 0,
+  marginRight: Platform.OS === `ios` ? 1 : 0,
+  ...Shadow(3),
+  marginTop: 5,
+  padding: 10,
+}
 
 export default StyleSheet.create({
-  pageContainer: {
-    flex: 1,
-    flexDirection: "column",
+  app: {
     backgroundColor: Colors.pageBackground,
+    flex: 1,
+  },
+  card: StyleSheet.flatten([
+    cardShared,
+    {
+      flexDirection: `column`,
+    },
+  ]),
+  circle: {
+    borderColor: Colors.textColor,
+    borderRadius: 5,
+    borderWidth: 1,
+    height: 10,
+    width: 10,
+  },
+  circularIcon: {
+    backgroundColor: Colors.textInputBackground,
+    borderRadius: 80,
+    marginRight: 10,
+    padding: 10,
+  },
+  horizontal: {
+    alignItems: `center`,
+    flexDirection: `row`,
+    justifyContent: `center`,
+  },
+  image: {
+    alignSelf: `stretch`,
+    backgroundColor: `rgba(0,0,0,0)`,
+    flex: 1,
+    height: undefined,
+    marginTop: 50,
+    width: undefined,
+  },
+  liveIndicator: {
+    borderRadius: 5,
+    flex: 0,
+    marginRight: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  mainTab: {
+    paddingTop: StatusBar.currentHeight,
+  },
+  mainTabBlur: {
+    bottom: 0,
+    height: 60,
+    left: 0,
+    right: 0,
+    top: undefined,
+  },
+  oldCard: StyleSheet.flatten([
+    cardShared,
+    {
+      backgroundColor: Colors.oldCardBackground,
+      flexDirection: `column`,
+    },
+  ]),
+  paddedIcon: {
+    marginLeft: 5,
+    marginRight: 5,
+  },
+  page: {
+    backgroundColor: Colors.pageBackground,
+    flex: 1,
+    paddingLeft: 20,
+    paddingRight: 20,
+  },
+  pageContainer: {
+    backgroundColor: Colors.pageBackground,
+    flex: 1,
+    flexDirection: `column`,
     height,
     width,
   },
   pageNoScrollContainer: {
     paddingTop: 10,
   },
-  mainTab: {
-    paddingTop: StatusBar.currentHeight,
-  },
-  app: {
-    flex: 1,
-    backgroundColor: Colors.pageBackground,
-  },
-  page: {
-    flex: 1,
-    backgroundColor: Colors.pageBackground,
-    paddingLeft: 20,
-    paddingRight: 20,
-  },
-  pageScrollView: {
-    paddingLeft: 0,
-    paddingRight: 0,
-  },
   pageScrollContent: {
     paddingLeft: 20,
     paddingRight: 20,
     paddingTop: 10,
   },
-  spacer: {
-    flex: 1,
+  pageScrollView: {
+    paddingLeft: 0,
+    paddingRight: 0,
   },
-  card: StyleSheet.flatten([
-    cardShared,
-    {
-      flexDirection: "column",
-    },
-  ]),
-  oldCard: StyleSheet.flatten([
-    cardShared,
-    {
-      flexDirection: "column",
-      backgroundColor: Colors.oldCardBackground,
-    },
-  ]),
   resultCard: StyleSheet.flatten([
     cardShared,
     {
-      marginTop: 5,
       marginBottom: 10,
       marginLeft: 2,
       marginRight: 2,
+      marginTop: 5,
     },
   ]),
-  horizontal: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  image: {
+  spacer: {
     flex: 1,
-    width: undefined,
-    height: undefined,
-    alignSelf: "stretch",
-    marginTop: 50,
-    backgroundColor: "rgba(0,0,0,0)",
   },
-  paddedIcon: {
-    marginLeft: 5,
-    marginRight: 5,
-  },
-  circularIcon: {
-    marginRight: 10,
-    backgroundColor: Colors.textInputBackground,
-    padding: 10,
-    borderRadius: 80,
-  },
-  circle: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderColor: Colors.textColor,
-    borderWidth: 1,
-  },
-  liveIndicator: {
-    flex: 0,
-    paddingVertical: 2,
-    paddingHorizontal: 5,
-    marginRight: 5,
-    borderRadius: 5,
-  },
-  mainTabBlur: {
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: undefined,
-    height: 60,
-  },
-});
+})

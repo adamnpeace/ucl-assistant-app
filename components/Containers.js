@@ -1,131 +1,163 @@
 /* eslint react/require-default-props: 0 */
-import React, { Fragment } from "react";
-import { BlurView } from "expo";
-import PropTypes from "prop-types";
-import { Feather } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons"
+import PropTypes from "prop-types"
+import React from "react"
 import {
   KeyboardAvoidingView,
   RefreshControl,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   View,
   ViewPropTypes,
-} from "react-native";
-import Styles from "../styles/Containers";
+} from "react-native"
 
-// const { height, width } = Dimensions.get("window");
+import Colors from "../constants/Colors"
+import Styles from "../styles/Containers"
 
 /* eslint-disable react/no-unused-prop-types */
 const propTypes = {
+  bottomColour: PropTypes.string,
   children: PropTypes.node,
-  style: ViewPropTypes.style,
-  refreshEnabled: PropTypes.bool,
-  onRefresh: PropTypes.func,
-  refreshing: PropTypes.bool,
+  contentContainerStyle: ViewPropTypes.style,
+  keyboardAvoidingViewStyle: ViewPropTypes.style,
   mainTabPage: PropTypes.bool,
-};
+  onRefresh: PropTypes.func,
+  refreshEnabled: PropTypes.bool,
+  refreshing: PropTypes.bool,
+  safeAreaViewStyle: ViewPropTypes.style,
+  style: ViewPropTypes.style,
+  topColour: PropTypes.string,
+}
 /* eslint-enable react/no-unused-prop-types */
 const defaultProps = {
-  children: "",
-  style: {},
-  refreshEnabled: false,
-  onRefresh: () => {},
-  refreshing: false,
+  bottomColour: Colors.pageBackground,
+  children: ``,
+  contentContainerStyle: {},
+  keyboardAvoidingViewStyle: {},
   mainTabPage: false,
-};
+  onRefresh: () => { },
+  refreshEnabled: false,
+  refreshing: false,
+  safeAreaViewStyle: {},
+  style: {},
+  topColour: Colors.pageBackground,
+}
 
-// export const Page = ({ children, style, ...props }) => (
-//   // <ScrollView style={Styles.pageScrollContainer}>
-//   //   <View style={[style, Styles.page]}>{children}</View>
-//   // </ScrollView>
-//   <KeyboardAvoidingView
-//     style={[Styles.pageScrollContainer]}
-//     {...props}
-//     behavior="padding"
-//   >
-//     <ScrollView style={[style, Styles.page, Styles.scrollPage]}>
-//       {children}
-//     </ScrollView>
-//   </KeyboardAvoidingView>
-// );
-// Page.propTypes = propTypes;
-// Page.defaultProps = defaultProps;
-const pageTopPadding = { height: 10 };
+const pageTopPadding = { height: 10 }
+
+const styles = StyleSheet.create({
+  safeAreaViewTop: {
+    flex: 0,
+  },
+})
+
 export const Page = ({
   children,
   style,
+  safeAreaViewStyle,
+  keyboardAvoidingViewStyle,
+  contentContainerStyle,
   refreshEnabled,
   onRefresh,
   refreshing,
   mainTabPage,
+  topColour,
+  bottomColour,
   ...props
 }) => (
-  <Fragment>
-    <KeyboardAvoidingView
-      style={[Styles.pageContainer, mainTabPage ? Styles.mainTab : null]}
-      {...props}
-      behavior="padding"
-    >
-      <ScrollView
-        contentContainerStyle={Styles.pageScrollContent}
-        style={[style, Styles.page, Styles.pageScrollView]}
-        refreshControl={
-          <RefreshControl
-            enabled={refreshEnabled}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-          />
-        }
+    <>
+      <SafeAreaView style={
+        [
+          styles.safeAreaViewTop,
+          { backgroundColor: topColour },
+        ]
+      }
+      />
+      <SafeAreaView style={[
+        Styles.pageContainer,
+        safeAreaViewStyle,
+      ]}
       >
-        <View style={pageTopPadding} />
-        {children}
-      </ScrollView>
-      {mainTabPage && (
-        <Fragment>
-          <BlurView
-            tint="light"
-            intensity={85}
-            style={[StyleSheet.absoluteFill, Styles.mainTabBlur]}
-          />
-          <View height={60} />
-        </Fragment>
-      )}
-    </KeyboardAvoidingView>
-  </Fragment>
-);
-Page.propTypes = propTypes;
-Page.defaultProps = defaultProps;
+        <KeyboardAvoidingView
+          style={[
+            Styles.pageContainer,
+            mainTabPage ? Styles.mainTab : null,
+            keyboardAvoidingViewStyle,
+          ]}
+          {...props}
+          behavior="padding"
+        >
+          <ScrollView
+            contentContainerStyle={[
+              Styles.pageScrollContent,
+              contentContainerStyle,
+            ]}
+            style={[Styles.page, Styles.pageScrollView, style]}
+            refreshControl={
+              refreshEnabled ? (
+                <RefreshControl
+                  enabled={refreshEnabled}
+                  onRefresh={onRefresh}
+                  refreshing={refreshing}
+                />
+              ) : null
+            }
+            keyboardDismissMode="on-drag"
+          >
+            <View style={pageTopPadding} />
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
+  )
+Page.propTypes = propTypes
+Page.defaultProps = defaultProps
 
-export const PageNoScroll = ({ children, style, ...props }) => (
-  <KeyboardAvoidingView
-    style={[Styles.pageContainer, Styles.pageNoScrollContainer]}
-    {...props}
-    behavior="padding"
-  >
-    <View style={[Styles.page, style]}>{children}</View>
-  </KeyboardAvoidingView>
-);
-PageNoScroll.propTypes = propTypes;
-PageNoScroll.defaultProps = defaultProps;
+export const PageNoScroll = ({
+  children,
+  style,
+  mainTabPage,
+  ...props
+}) => (
+    <SafeAreaView style={Styles.pageContainer}>
+      <KeyboardAvoidingView
+        style={[
+          Styles.pageContainer,
+          Styles.pageNoScrollContainer,
+          mainTabPage ? Styles.mainTab : null,
+        ]}
+        {...props}
+        behavior="padding"
+      >
+        <View style={[Styles.page, style]}>{children}</View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  )
+PageNoScroll.propTypes = propTypes
+PageNoScroll.defaultProps = defaultProps
 
-export const Spacer = () => <View style={Styles.spacer} />;
+export const Spacer = () => <View style={Styles.spacer} />
 
 export const Horizontal = ({ children, style }) => (
   <View style={[Styles.horizontal, style]}>{children}</View>
-);
-Horizontal.propTypes = propTypes;
-Horizontal.defaultProps = defaultProps;
+)
+Horizontal.propTypes = propTypes
+Horizontal.defaultProps = defaultProps
 
-export const PaddedIcon = props => (
+export const PaddedIcon = (props) => (
   <Feather {...props} style={Styles.paddedIcon} />
-);
-PaddedIcon.propTypes = Feather.propTypes;
-PaddedIcon.defaultProps = Feather.defaultProps;
+)
+PaddedIcon.propTypes = Feather.propTypes
+PaddedIcon.defaultProps = Feather.defaultProps
 
-export const CircularIcon = props => (
-  <Feather {...props} style={Styles.circularIcon} />
-);
-CircularIcon.propTypes = Feather.propTypes;
-CircularIcon.defaultProps = Feather.defaultProps;
+export const CircularIcon = (props) => (
+  <View style={Styles.circularIcon}>
+    <Feather {...props} />
+  </View>
+)
+CircularIcon.propTypes = Feather.propTypes
+CircularIcon.defaultProps = Feather.defaultProps
 
-export default {};
+export default {}
